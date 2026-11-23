@@ -31,6 +31,8 @@ pnpm prepare:data -- src/n4.csv public/data/n4.json
 pnpm prepare:data -- src/n3.csv public/data/n3.json
 ```
 
+변환 시 같은 ID의 기존 한국어 뜻·품사·예문을 보존합니다. 새 단어에는 영어 뜻을 임시로 사용하므로 한국어 보강이 필요합니다. 기존 출력 JSON을 읽을 수 없으면 덮어쓰지 않고 중단합니다.
+
 현재 N5 718개, N4 666개, N3 2,139개 단어가 포함되어 있습니다. 원본 CSV의 뜻은 영어이며, 읽는 법이 없는 행은 변환 시 제외합니다. JLPT 단어 목록은 공개된 커뮤니티 자료를 바탕으로 하므로 공식 출제 범위로 간주하지 마세요.
 
 레벨별 원본 CSV는 [elzup/jlpt-word-list](https://github.com/elzup/jlpt-word-list)의 `src/n5.csv`, `src/n4.csv`, `src/n3.csv`에서 가져왔으며, 원본 저장소의 MIT 라이선스는 `LICENSE.jlpt-word-list`에 포함했습니다.

@@ -25,15 +25,27 @@ const splitCsvLine = (line) => {
   return [...cells, cell];
 };
 
+const existingWords = fs.existsSync(output) ? JSON.parse(fs.readFileSync(output, 'utf8')) : [];
+if (
+  !Array.isArray(existingWords) ||
+  existingWords.some((word) => !word || typeof word.id !== 'string')
+) {
+  throw new Error('Existing vocabulary data is invalid; output was not changed');
+}
+const existingById = new Map(existingWords.map((word) => [word.id, word]));
+
 const words = rows
   .map((line) => {
     const [jp, reading, meaningEn] = splitCsvLine(line).map((value) => value.trim());
     if (!jp || !reading || !meaningEn) return null;
+    const id = level === 'N5' ? `${jp}-${reading}` : `${level}-${jp}-${reading}`;
+    const existing = existingById.get(id);
     return {
+      ...existing,
       id: level === 'N5' ? `${jp}-${reading}` : `${level}-${jp}-${reading}`,
       jp,
       reading,
-      meaningKo: meaningEn,
+      meaningKo: existing?.meaningKo || meaningEn,
       meaningEn,
       jlptLevel: level,
     };
