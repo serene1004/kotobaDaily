@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Menu, Moon, Sun, X } from 'lucide-react';
 import { Link, Route, Routes, useBlocker, useLocation, useNavigate } from 'react-router-dom';
 import styles from './App.module.css';
@@ -13,7 +13,7 @@ import { BookmarkStudy } from './components/BookmarkStudy';
 import { VocabularyQuiz } from './components/VocabularyQuiz';
 import { useStudyProgress } from './hooks/useStudyProgress';
 import { useVocabulary } from './hooks/useVocabulary';
-import { readStorage, writeStorage } from './lib/study';
+import { getStorageFailure, readStorage, subscribeStorageFailure, writeStorage } from './lib/study';
 import type { SessionDifficulty } from './types';
 
 type Theme = 'light' | 'dark';
@@ -29,6 +29,8 @@ function App() {
     return saved === 'N4' || saved === 'N3' ? saved : 'N5';
   });
   const [studyStarted, setStudyStarted] = useState(false);
+  const [showLevelComplete, setShowLevelComplete] = useState(false);
+  const storageFailed = useSyncExternalStore(subscribeStorageFailure, getStorageFailure);
   const [sessionSize, setSessionSize] = useState<5 | 10>(() => {
     const saved = readStorage<number>('studySetSize', 10);
     return saved === 5 ? 5 : 10;
@@ -89,7 +91,11 @@ function App() {
     toggleBookmarkById,
   } = useStudyProgress(words, level, sessionSize);
   const isActiveStudy =
-    location.pathname === '/study' && studyStarted && quest.length > 0 && index < quest.length;
+    location.pathname === '/study' &&
+    studyStarted &&
+    !showLevelComplete &&
+    quest.length > 0 &&
+    index < quest.length;
   const blocker = useBlocker(isActiveStudy);
 
   useEffect(() => {
@@ -100,7 +106,18 @@ function App() {
   useEffect(() => writeStorage('studyLevel', level), [level]);
   useEffect(() => writeStorage('studySetSize', sessionSize), [sessionSize]);
 
+  const selectedSummary = levelSummaries.find((summary) => summary.level === level);
+  const levelComplete = Boolean(
+    selectedSummary?.total && selectedSummary.learned === selectedSummary.total,
+  );
+  const nextLevel = level === 'N5' ? 'N4' : level === 'N4' ? 'N3' : null;
   const startStudy = () => {
+    if (levelComplete) {
+      setShowLevelComplete(true);
+      navigate('/study');
+      return;
+    }
+    setShowLevelComplete(false);
     if (quest.length > 0 && index >= quest.length) {
       startAnotherQuest();
     } else if (
@@ -114,7 +131,11 @@ function App() {
     navigate('/study');
   };
 
-  const selectStudyLevel = (selectedLevel: 'N5' | 'N4' | 'N3') => setLevel(selectedLevel);
+  const selectStudyLevel = (selectedLevel: 'N5' | 'N4' | 'N3') => {
+    setLevel(selectedLevel);
+    setShowLevelComplete(false);
+    setStudyStarted(false);
+  };
 
   const study = (
     <>
@@ -136,6 +157,37 @@ function App() {
               ? '잠시 후 페이지를 새로고침해 주세요.'
               : `${level} 단어 데이터를 준비한 뒤 다시 시도해 주세요.`}
           </p>
+        </section>
+      ) : showLevelComplete ? (
+        <section className={styles.complete}>
+          <h2>{level} 단어를 모두 한 번 이상 맞혔어요!</h2>
+          <p>같은 레벨을 계속 복습하거나 다음 학습을 선택해 주세요.</p>
+          <p>
+            계속 복습하면 복습 예정 단어를 먼저 출제하고 나머지는 무작위로 골라요. 정답·오답과 복습
+            일정도 갱신돼요.
+          </p>
+          <div className={styles['complete-actions']}>
+            <button
+              className={`${styles.primary} button-primary`}
+              type="button"
+              onClick={() => {
+                startAnotherQuest(true);
+                setShowLevelComplete(false);
+                setStudyStarted(true);
+              }}
+            >
+              {level} 계속 복습하기
+            </button>
+            {nextLevel && (
+              <button
+                className={styles.secondary}
+                type="button"
+                onClick={() => selectStudyLevel(nextLevel)}
+              >
+                {nextLevel} 학습하기
+              </button>
+            )}
+          </div>
         </section>
       ) : !studyStarted ? (
         <section className={styles.complete}>
@@ -221,7 +273,7 @@ function App() {
             <button
               className={`${styles.primary} button-primary`}
               type="button"
-              onClick={startAnotherQuest}
+              onClick={startStudy}
             >
               다른 단어 더 공부하기
             </button>
@@ -307,6 +359,13 @@ function App() {
           </button>
         </div>
       </header>
+      {storageFailed && (
+        <p className={styles.storageWarning} role="alert">
+          학습 기록을 브라우저에 저장하지 못했어요. 현재 화면에서 계속 공부할 수 있지만
+          새로고침하거나 닫으면 최근 기록이 사라질 수 있어요. 브라우저의 저장 공간과 사이트 데이터
+          설정을 확인해 주세요.
+        </p>
+      )}
       <Routes>
         <Route
           path="/"

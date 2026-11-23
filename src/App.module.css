@@ -246,3 +246,11 @@
     flex-wrap: wrap;
   }
 }
+
+.storageWarning {
+  padding: var(--space-4);
+  border: 1px solid var(--accent);
+  border-radius: var(--space-3);
+  background: var(--accent-soft);
+  color: var(--ink);
+}

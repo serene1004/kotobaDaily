@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { SessionDifficulty, Word, WordProgress } from '../types';
-import { addDays, pickQuest, readStorage, reviewDelay, writeStorage } from '../lib/study';
+import { addDays, pickQuest, readStorage, reviewDelay, shuffle, writeStorage } from '../lib/study';
 
 const todayKey = () => new Date().toLocaleDateString('sv-SE');
 const readLevelStorage = <T>(key: string, level: string, day: string, fallback: T) =>
@@ -29,6 +29,7 @@ export function useStudyProgress(words: Word[], level: string = 'N5', sessionSiz
     readStorage('wordProgress', {}),
   );
   const questKey = `${level}:${day}`;
+  const [loadedQuestKey, setLoadedQuestKey] = useState(questKey);
   const [quest, setQuest] = useState<string[]>(() =>
     readLevelStorage('quest', level, todayKey(), []),
   );
@@ -76,6 +77,7 @@ export function useStudyProgress(words: Word[], level: string = 'N5', sessionSiz
       readLevelStorage('studied', level, day, readLevelStorage('progress', level, day, 0)),
     );
     setCorrectCount(readLevelStorage('correct', level, day, 0));
+    setLoadedQuestKey(`${level}:${day}`);
   }, [day, level]);
 
   useEffect(() => {
@@ -84,8 +86,9 @@ export function useStudyProgress(words: Word[], level: string = 'N5', sessionSiz
   }, [sessionKey]);
 
   useEffect(() => {
-    if (quest.length || !words.length) return;
+    if (loadedQuestKey !== questKey || quest.length || !studyWords.length) return;
     const nextQuest = pickQuest(studyWords, progress, seen, day, sessionSize);
+    if (!nextQuest.length) return;
     const nextSeen = [...new Set([...seen, ...nextQuest])];
     setQuest(nextQuest);
     setCurrentQuestSize(sessionSize);
@@ -93,7 +96,7 @@ export function useStudyProgress(words: Word[], level: string = 'N5', sessionSiz
     writeStorage(`quest:${questKey}`, nextQuest);
     writeStorage(`questSize:${questKey}`, sessionSize);
     writeStorage(`seen:${questKey}`, nextSeen);
-  }, [day, progress, quest.length, seen, sessionSize, studyWords]);
+  }, [day, loadedQuestKey, progress, quest.length, questKey, seen, sessionSize, studyWords]);
 
   const bookmarks = useMemo(
     () => words.filter((word) => bookmarkIds.includes(word.id)),
@@ -189,15 +192,27 @@ export function useStudyProgress(words: Word[], level: string = 'N5', sessionSiz
     writeStorage('bookmarkIds', nextIds);
   };
 
-  const startAnotherQuest = () => {
-    const nextQuest = pickQuest(studyWords, progress, seen, day, sessionSize);
-    if (!nextQuest.length) return;
+  const startAnotherQuest = (reviewAll = false) => {
+    const due = shuffle(
+      studyWords.filter(({ id }) => progress[id]?.nextReviewAt && progress[id].nextReviewAt <= day),
+    );
+    const dueIds = new Set(due.map(({ id }) => id));
+    const nextQuest = reviewAll
+      ? [...due, ...shuffle(studyWords.filter(({ id }) => !dueIds.has(id)))]
+          .slice(0, sessionSize)
+          .map(({ id }) => id)
+      : pickQuest(studyWords, progress, seen, day, sessionSize);
     const nextSeen = [...new Set([...seen, ...nextQuest])];
     setQuest(nextQuest);
     setCurrentQuestSize(sessionSize);
     setSeen(nextSeen);
     setIndex(0);
     setCorrectCount(0);
+    setSessionAnswers({});
+    setSessionDifficulty(null);
+    const nextSessionKey = `${questKey}:${nextQuest.join(',')}`;
+    writeStorage(`answers:${nextSessionKey}`, {});
+    writeStorage(`difficulty:${nextSessionKey}`, null);
     writeStorage(`quest:${questKey}`, nextQuest);
     writeStorage(`questSize:${questKey}`, sessionSize);
     writeStorage(`seen:${questKey}`, nextSeen);

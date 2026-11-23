@@ -57,7 +57,11 @@ export function LearningLevelSelector({
       </div>
       <div className={styles['level-list']}>
         {levelSummaries.map(({ level, total, learned, dueReviews }) => {
-          const percent = total ? Math.round((learned / total) * 100) : 0;
+          const percent = total
+            ? learned === total
+              ? 100
+              : Math.min(99, Math.round((learned / total) * 100))
+            : 0;
           return (
             <article key={level} className={styles['level-row']}>
               <div className={styles['level-name']}>

@@ -12,11 +12,25 @@ export const readStorage = <T>(key: string, fallback: T): T => {
   }
 };
 
+let storageFailed = false;
+const storageFailureListeners = new Set<() => void>();
+export const getStorageFailure = () => storageFailed;
+export const subscribeStorageFailure = (listener: () => void) => {
+  storageFailureListeners.add(listener);
+  return () => {
+    storageFailureListeners.delete(listener);
+  };
+};
+
 export const writeStorage = (key: string, value: unknown) => {
   try {
     localStorage.setItem(storageKey(key), JSON.stringify(value));
   } catch {
-    // Storage can be unavailable in private browsing or a restricted context.
+    if (!storageFailed) {
+      storageFailed = true;
+      // Writes can occur inside a React state updater; notify after it finishes.
+      queueMicrotask(() => storageFailureListeners.forEach((listener) => listener()));
+    }
   }
 };
 
@@ -122,9 +136,10 @@ export const pickQuest = (
       .map(({ id }) => id),
   );
   const seenSet = new Set(seen);
-  const reviews = shuffle(
+  const availableReviews = shuffle(
     words.filter((word) => reviewSet.has(word.id) && !seenSet.has(word.id)),
-  ).slice(0, 3);
+  );
+  const reviews = availableReviews.slice(0, 3);
   const fresh = shuffle(
     words.filter((word) => !progress[word.id]?.correctCount && !seenSet.has(word.id)),
   ).slice(0, 7);
@@ -138,5 +153,7 @@ export const pickQuest = (
     ),
   );
 
-  return [...reviews, ...fresh, ...fallback].slice(0, limit).map((word) => word.id);
+  return [...reviews, ...fresh, ...fallback, ...availableReviews.slice(3)]
+    .slice(0, limit)
+    .map((word) => word.id);
 };
