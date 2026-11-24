@@ -69,7 +69,7 @@ export function StudySession({
       '오류 유형과 수정 제안을 적어 주세요.',
     ].join('\n'),
   });
-  const reportUrl = `https://github.com/serene1004/kotoba-daily/issues/new?${reportParams}`;
+  const reportUrl = `https://github.com/serene1004/kotobaDaily/issues/new?${reportParams}`;
 
   const moveNext = (action: () => void) => {
     if (pendingSkipKey) writeStorage(pendingSkipKey, false);

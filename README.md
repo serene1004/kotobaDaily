@@ -94,13 +94,13 @@ pnpm dev
 docker compose up --build
 ```
 
-Docker 프런트엔드는 [http://localhost:9090](http://localhost:9090)에서 실행됩니다. Nginx가 SPA 라우팅을 처리하므로 앱의 각 경로로 직접 진입해도 정상 동작합니다. 빌드 이미지는 `kotoba-daily:latest`로 등록되며, 컨테이너는 Docker Desktop 재시작 후에도 자동으로 다시 시작됩니다.
+Docker 프런트엔드는 [http://localhost:9090](http://localhost:9090)에서 실행됩니다. Nginx가 SPA 라우팅을 처리하므로 앱의 각 경로로 직접 진입해도 정상 동작합니다. 빌드 이미지는 `kotobadaily:latest`로 등록되며, 컨테이너는 Docker Desktop 재시작 후에도 자동으로 다시 시작됩니다.
 
 ## GitHub Pages
 
 이 프로젝트는 GitHub Actions로 빌드하고 GitHub Pages로 배포합니다.
 
-[https://serene1004.dev/kotoba-daily/](https://serene1004.github.io/kotoba-daily/)
+[https://serene1004.dev/kotobaDaily/](https://serene1004.github.io/kotobaDaily/)
 
 ## 명령어
 

@@ -1,11 +1,11 @@
-name: kotoba-daily
+name: kotobadaily
 
 services:
   frontend:
     build:
       context: .
       dockerfile: Dockerfile
-    image: kotoba-daily:latest
+    image: kotobadaily:latest
     ports:
       - "9090:80"
     restart: unless-stopped
